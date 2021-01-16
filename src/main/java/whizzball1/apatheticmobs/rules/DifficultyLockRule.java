@@ -1,7 +1,7 @@
 package whizzball1.apatheticmobs.rules;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.world.EnumDifficulty;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.World;
 import whizzball1.apatheticmobs.config.ApatheticConfig;
 
@@ -16,7 +16,7 @@ public class DifficultyLockRule extends Rule {
     public static Set<String> allowedDifficulties = new HashSet<>();
 
     public boolean shouldExecute(Entity ent) {
-        if (!ApatheticConfig.rules.difficultyLock) return false;
+        if (!ApatheticConfig.RULES.difficultyLock.get()) return false;
         return true;
     }
 
@@ -35,8 +35,8 @@ public class DifficultyLockRule extends Rule {
     public static boolean difficultyMatch(World world, boolean force) {
         if (force) {
             boolean yes = false;
-            String currentDifficulty = idToDifficulty(world.getDifficulty().getDifficultyId());
-            for (String difficulty : ApatheticConfig.rules.difficulties) {
+            String currentDifficulty = idToDifficulty(world.getDifficulty().getId());
+            for (String difficulty : ApatheticConfig.RULES.difficulties.get()) {
                 if (currentDifficulty.equals(difficulty)) {
                     yes = true;
                 }
@@ -48,8 +48,8 @@ public class DifficultyLockRule extends Rule {
         }
     }
 
-    public static void difficultyChange(EnumDifficulty difficulty) {
-        if (allowedDifficulties.contains(idToDifficulty(difficulty.getDifficultyId()))) {
+    public static void difficultyChange(Difficulty difficulty) {
+        if (allowedDifficulties.contains(idToDifficulty(difficulty.getId()))) {
             isCorrectDifficulty = true;
         } else isCorrectDifficulty = false;
     }

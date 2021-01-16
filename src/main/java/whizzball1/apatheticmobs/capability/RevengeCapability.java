@@ -1,6 +1,6 @@
 package whizzball1.apatheticmobs.capability;
 
-import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.LivingEntity;
 import whizzball1.apatheticmobs.config.ApatheticConfig;
 
 public class RevengeCapability implements IRevengeCap {
@@ -13,9 +13,9 @@ public class RevengeCapability implements IRevengeCap {
     }
 
     @Override
-    public void setVengeful(boolean venge, EntityLivingBase entity) {
+    public void setVengeful(boolean venge, LivingEntity entity) {
         revenge = venge;
-        if (venge && ApatheticConfig.rules.revengeTime && entity.ticksExisted - revengeTimer < ApatheticConfig.rules.revengeTimer)
+        if (venge && ApatheticConfig.RULES.revengeTime.get() && entity.ticksExisted - revengeTimer < ApatheticConfig.RULES.revengeTimer.get())
             setTimer(entity.ticksExisted);
     }
 

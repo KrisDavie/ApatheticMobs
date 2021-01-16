@@ -1,23 +1,32 @@
 package whizzball1.apatheticmobs;
 
-import net.minecraft.block.Block;
-import net.minecraft.item.Item;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.DimensionType;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityInject;
 import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.config.ModConfig.Reloading;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.event.*;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.registry.GameRegistry;
-import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.event.server.FMLServerStartedEvent;
+import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.core.config.Configurator;
+
 import whizzball1.apatheticmobs.capability.IRevengeCap;
 import whizzball1.apatheticmobs.capability.RevengeCapFactory;
 import whizzball1.apatheticmobs.capability.RevengeStorage;
@@ -30,21 +39,14 @@ import whizzball1.apatheticmobs.rules.DifficultyLockRule;
 import whizzball1.apatheticmobs.rules.Rules;
 import whizzball1.apatheticmobs.rules.TargeterTypeRule;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Random;
 
-@Mod(
-        modid = ApatheticMobs.MOD_ID,
-        name = ApatheticMobs.MOD_NAME,
-        version = ApatheticMobs.VERSION,
-        dependencies = "required-after:forge@[14.23.5.2824,)"
-)
+@Mod(ApatheticMobs.MOD_ID)
 public class ApatheticMobs {
 
     public static final String MOD_ID = "apatheticmobs";
     public static final String MOD_NAME = "ApatheticMobs";
-    public static final String VERSION = "1.4.1";
+    public static final String VERSION = "1.4.2";
 
     public static final Logger logger = LogManager.getLogger(MOD_NAME);
     public static final Random random = new Random();
@@ -54,51 +56,66 @@ public class ApatheticMobs {
     @CapabilityInject(IRevengeCap.class)
     public static final Capability<IRevengeCap> REVENGE_CAPABILITY = null;
 
+    public ApatheticMobs() {
 
+        logger.info(MOD_NAME + " " + VERSION + " initlizing...");
 
-    @Mod.Instance(MOD_ID)
-    public static ApatheticMobs INSTANCE;
+        if (System.getProperty("apamobsdebug") == "true") {
+            logger.info(MOD_NAME + " " + VERSION + " enabling debug logging...");
+            Configurator.setLevel(logger.getName(), Level.DEBUG);
 
+            logger.debug("..ok");
+        } else {
+            Configurator.setLevel(logger.getName(), Level.INFO);
+        }
+        IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
 
-    @Mod.EventHandler
-    public void preinit(FMLPreInitializationEvent event) {
-        //DoWhatYouWant.makeTheFile();
-        CapabilityManager.INSTANCE.register(IRevengeCap.class, RevengeStorage.STORAGE, new RevengeCapFactory());
+        // General mod setup
+
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ApatheticConfig.COMMON_CONFIG);
+        ApatheticConfig.loadConfig(ApatheticConfig.COMMON_CONFIG,
+                FMLPaths.CONFIGDIR.get().resolve("apatheticmobs-server.toml"));
+        modBus.addListener(this::setup);
+
     }
 
-
-    @Mod.EventHandler
-    public void init(FMLInitializationEvent event) {
+    private void setup(final FMLCommonSetupEvent event) {
+        logger.info(MOD_NAME + " " + VERSION + "  onStart...");
+        CapabilityManager.INSTANCE.register(IRevengeCap.class, RevengeStorage.STORAGE, new RevengeCapFactory());
         MinecraftForge.EVENT_BUS.register(new ApatheticHandler());
         MinecraftForge.EVENT_BUS.register(new RuleHandler());
-    }
-
-
-    @Mod.EventHandler
-    public void postinit(FMLPostInitializationEvent event) {
 
     }
 
-    @Mod.EventHandler
-    public void serverStarting(FMLServerStartingEvent event) {
-        ModCommands.registerCommands(event);
-
+    @SubscribeEvent
+    public void registerCommands(RegisterCommandsEvent e) {
+        ModCommands.registerCommands(e);
     }
 
-    @Mod.EventHandler
-    public void serverStarted(FMLServerStartedEvent e) {
-
+    private void loadRules() {
         DifficultyLockRule.allowedDifficulties.clear();
-        Collections.addAll(DifficultyLockRule.allowedDifficulties, ApatheticConfig.rules.difficulties);
+        ApatheticConfig.RULES.difficulties.get().forEach(t -> DifficultyLockRule.allowedDifficulties.add(t));
 
         TargeterTypeRule.exclusions.clear();
-        Arrays.asList(ApatheticConfig.rules.exclusions).forEach(t -> TargeterTypeRule.exclusions.add(new ResourceLocation(t)));
+        ApatheticConfig.RULES.exclusions.get().forEach(t -> TargeterTypeRule.exclusions.add(new ResourceLocation(t)));
         TargeterTypeRule.inclusions.clear();
-        Arrays.asList(ApatheticConfig.rules.inclusions).forEach(t -> TargeterTypeRule.inclusions.add(new ResourceLocation(t)));
+        ApatheticConfig.RULES.inclusions.get().forEach(t -> TargeterTypeRule.exclusions.add(new ResourceLocation(t)));
+    }
 
-        MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
+    @SubscribeEvent
+    public void onConfigReload(Reloading e) {
+        loadRules();
+
+    }
+
+    @SubscribeEvent
+    public void serverStarted(FMLServerStartedEvent e) {
+
+        loadRules();
+
+        MinecraftServer server = e.getServer();
         if (server != null) {
-            World world = server.getEntityWorld();
+            ServerWorld world = server.func_241755_D_();
             DifficultyLockRule.difficultyMatch(world, true);
             if (!world.isRemote) {
                 WhitelistData.get(world);
@@ -106,6 +123,5 @@ public class ApatheticMobs {
         }
 
     }
-
 
 }

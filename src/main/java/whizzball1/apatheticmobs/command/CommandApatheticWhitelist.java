@@ -1,23 +1,19 @@
 package whizzball1.apatheticmobs.command;
 
-import com.mojang.authlib.GameProfile;
-import net.minecraft.command.CommandBase;
-import net.minecraft.command.CommandException;
-import net.minecraft.command.ICommandSender;
-import net.minecraft.command.WrongUsageException;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraftforge.common.config.Config;
-import net.minecraftforge.common.config.ConfigElement;
-import net.minecraftforge.common.config.ConfigManager;
-import whizzball1.apatheticmobs.ApatheticMobs;
-import whizzball1.apatheticmobs.config.ApatheticConfig;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
+
+
+import net.minecraft.command.CommandSource;
+import net.minecraft.command.Commands;
+import net.minecraft.util.text.StringTextComponent;
 import whizzball1.apatheticmobs.data.WhitelistData;
 
-import java.util.*;
-
-public class CommandApatheticWhitelist extends CommandBase {
+public class CommandApatheticWhitelist {
 
     private List<String> subCommands = new ArrayList<>();
 
@@ -31,30 +27,23 @@ public class CommandApatheticWhitelist extends CommandBase {
         return "apatheticwhitelist";
     }
 
-    public String getUsage(ICommandSender sender) {
-        return "commands.apatheticmobs.aw.usage";
-    }
 
     public int getRequiredPermissionLevel() {
         return 2;
     }
 
-    public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-        boolean test = args.length != 2;
-        if (test && !args[0].equals("get")) {
-            throw new WrongUsageException(getUsage(sender));
-        }
-        GameProfile gameProfile = server.getPlayerProfileCache().getGameProfileForUsername(test ? "t" : args[1]);
-        if (gameProfile == null) {
-            throw new CommandException("commands.apatheticmobs.aw.playerfailed");
-        }
-        UUID id = gameProfile.getId();
-        WhitelistData data = WhitelistData.get(sender.getEntityWorld());
-        switch (args[0]) {
-            case "get":
+ 
+
+	public static void register(CommandDispatcher<CommandSource> dispatcher) {
+		dispatcher.register(Commands.literal("apatheticwhitelist")
+				.requires(commandSource -> commandSource.hasPermissionLevel(2))
+				.then(Commands.literal("get")
+						.executes(context -> {
+							UUID id = context.getSource().asPlayer().getUniqueID();
+							WhitelistData data = WhitelistData.get(context.getSource().getWorld());
                 StringBuilder b = new StringBuilder();
                 for (UUID i : data.playerSet) {
-                    b.append(server.getPlayerProfileCache().getProfileByUUID(i).getName());
+			                    b.append(context.getSource().getServer().getPlayerProfileCache().getProfileByUUID(i).getName());
                     b.append(", ");
                 }
                 b.reverse();
@@ -64,24 +53,45 @@ public class CommandApatheticWhitelist extends CommandBase {
 
                 }
                 b.reverse();
-                sender.sendMessage(new TextComponentString(b.toString()));
-                break;
-            case "add":
+			                
+							return 1;
+						})
+				)
+				.then(Commands.literal("add")
+						.then(Commands.argument("username", StringArgumentType.word())
+						.executes(context -> {
+							String username  = StringArgumentType.getString(context, "username");
+							UUID id = context.getSource().getServer().getPlayerProfileCache().getGameProfileForUsername(username).getId();
+							WhitelistData data = WhitelistData.get(context.getSource().getWorld());
                 if (!data.playerSet.contains(id)) {
                     data.playerSet.add(id);
                     data.markDirty();
                 } else {
-                    sender.sendMessage(new TextComponentTranslation("commands.apatheticmobs.aw.playerfound"));
+			                    context.getSource().asPlayer().sendMessage(new StringTextComponent("commands.apatheticmobs.aw.playerfound"), null);
                 }
-                break;
-            case "remove":
+							return 1;
+						})
+				)
+				)
+				.then(Commands.literal("remove")
+						.then(Commands.argument("username", StringArgumentType.word())
+						.executes(context -> {
+							String username  = StringArgumentType.getString(context, "username");
+							UUID id = context.getSource().getServer().getPlayerProfileCache().getGameProfileForUsername(username).getId();
+							WhitelistData data = WhitelistData.get(context.getSource().getWorld());
                 if (data.playerSet.contains(id)) {
                     data.playerSet.remove(id);
                     data.markDirty();
                 } else {
-                    sender.sendMessage(new TextComponentTranslation("commands.apatheticmobs.aw.playerfailed"));
-                }
-                break;
+				                	context.getSource().asPlayer().sendMessage(new StringTextComponent("commands.apatheticmobs.aw.playerfailed"), null);
         }
+
+							return 1;
+						})
+				)
+				)
+		);
+		
+		
     }
 }

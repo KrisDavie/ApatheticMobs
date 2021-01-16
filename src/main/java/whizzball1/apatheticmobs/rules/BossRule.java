@@ -8,7 +8,7 @@ import java.util.Set;
 public class BossRule extends Rule {
     @Override
     public boolean shouldExecute(Entity ent) {
-        if (!ApatheticConfig.bossRules.bossOption) return false;
+        if (!ApatheticConfig.BOSS.bossOption.get()) return false;
         return true;
     }
 

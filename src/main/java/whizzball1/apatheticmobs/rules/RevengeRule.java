@@ -1,42 +1,61 @@
 package whizzball1.apatheticmobs.rules;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.LivingEntity;
+import net.minecraftforge.common.util.LazyOptional;
 import whizzball1.apatheticmobs.ApatheticMobs;
 import whizzball1.apatheticmobs.capability.IRevengeCap;
 import whizzball1.apatheticmobs.config.ApatheticConfig;
 
+import java.util.Optional;
 import java.util.Set;
 
 public class RevengeRule extends Rule {
 
 
     public boolean shouldExecute(Entity ent) {
-        EntityLivingBase elb = (EntityLivingBase) ent;
-        if (!ApatheticConfig.rules.revenge) return false;
-        if (!ent.hasCapability(ApatheticMobs.REVENGE_CAPABILITY, null)) return false;
-        IRevengeCap cap = elb.getCapability(ApatheticMobs.REVENGE_CAPABILITY, null);
-        if (elb.getRevengeTarget() == null && !cap.isVengeful()) {
-            //ApatheticMobs.logger.info("I have failed!");
+    	LivingEntity elb = (LivingEntity) ent;
+        if (!ApatheticConfig.RULES.revenge.get()) {
+        	ApatheticMobs.logger.debug("Revenge not enabled!");
             return false;
         }
-        //ApatheticMobs.logger.info(cap.isVengeful());
+        if (ent.getCapability(ApatheticMobs.REVENGE_CAPABILITY, null) == null) return false;
+        LazyOptional<IRevengeCap> cap = elb.getCapability(ApatheticMobs.REVENGE_CAPABILITY,null);
+        Optional<Boolean> res = cap.map(i -> { 
+        	if (elb.getRevengeTarget() == null && !i.isVengeful()) {
+        	return false;
+        	}else {
         return true;
+    }
+        	 //ApatheticMobs.logger.info(cap.isVengeful());
+        });
+
+        
+        return res.orElse(true);
     }
 
     public boolean execute(Entity ent) {
-        //ApatheticMobs.logger.info("Executing revenge rule!");
-        EntityLivingBase elb = (EntityLivingBase) ent;
-        IRevengeCap cap = elb.getCapability(ApatheticMobs.REVENGE_CAPABILITY, null);
+        ApatheticMobs.logger.debug("Executing revenge rule!");
+    	LivingEntity elb = (LivingEntity) ent;
+    	LazyOptional<IRevengeCap> cap = elb.getCapability(ApatheticMobs.REVENGE_CAPABILITY,null);
+    	
+
         if (elb.getRevengeTarget() != null) {
-            cap.setVengeful(true, elb);
+        	cap.ifPresent(inst -> { inst.setVengeful(true,elb); });
             return false;
-        } else if (cap.isVengeful()) {
+        } 
+        
+       Optional<Boolean> res = cap.map(i -> { 
+    	   if(i.isVengeful()) {
             if (!revengeOver(cap, elb)) return false;
-            cap.setVengeful(false, elb);
-            cap.setTimer(0);
+       i.setVengeful(false, elb);
+       i.setTimer(0);
         }
         return true;
+       
+	 }
+       );
+	return res.get();
     }
 
     public int priority() {
@@ -47,9 +66,13 @@ public class RevengeRule extends Rule {
         return null;
     }
 
-    public boolean revengeOver(IRevengeCap capability, EntityLivingBase entity) {
-        if (!ApatheticConfig.rules.revengeTime) return false;
-        if (entity.ticksExisted - capability.getTimer() > ApatheticConfig.rules.revengeTimer) {
+    public boolean revengeOver(LazyOptional<IRevengeCap> cap, LivingEntity entity) {
+        if (!ApatheticConfig.RULES.revengeTime.get()) return false;
+        
+        Optional<Integer> res = cap.map(i -> { 
+        	return i.getTimer();
+        });
+        if (entity.ticksExisted - res.get() > ApatheticConfig.RULES.revengeTimer.get()) {
             return true;
         }
         return false;
