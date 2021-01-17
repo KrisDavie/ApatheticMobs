@@ -1,5 +1,6 @@
 package whizzball1.apatheticmobs.rules;
 
+import net.minecraft.world.World;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -13,9 +14,11 @@ import java.util.Set;
 public class PlayerWhitelistRule extends Rule {
 
     public boolean shouldExecute(Entity ent) {
-        if (!ApatheticConfig.RULES.playerWhitelist.get()) return false;
+        if (!ApatheticConfig.RULES.playerWhitelist.get())
+            return false;
         ServerWorld world = (ServerWorld) ent.getEntityWorld();
-        if (world.getPlayerByUuid(ent.getUniqueID()) == null) return false;
+        if (world.getPlayerByUuid(ent.getUniqueID()) == null)
+            return false;
         return true;
     }
 
@@ -25,7 +28,9 @@ public class PlayerWhitelistRule extends Rule {
 
     public boolean execute(Entity ent) {
         PlayerEntity ep = (PlayerEntity) ((LivingEntity) ent).getCombatTracker().getFighter();
-        if (WhitelistData.get((ServerWorld) ep.getEntityWorld()).playerSet.contains(ep.getUniqueID())) return true;
+        World world = ep.getEntityWorld();
+        if (WhitelistData.get((ServerWorld) world).playerSet.contains(ep.getUniqueID()))
+            return true;
         return false;
     }
 
@@ -33,8 +38,5 @@ public class PlayerWhitelistRule extends Rule {
     public Set<String> allowedModules() {
         return null;
     }
-
-
-
 
 }

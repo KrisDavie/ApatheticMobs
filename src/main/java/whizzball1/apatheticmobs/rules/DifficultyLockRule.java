@@ -5,9 +5,7 @@ import net.minecraft.world.Difficulty;
 import net.minecraft.world.World;
 import whizzball1.apatheticmobs.config.ApatheticConfig;
 
-import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class DifficultyLockRule extends Rule {
@@ -16,7 +14,8 @@ public class DifficultyLockRule extends Rule {
     public static Set<String> allowedDifficulties = new HashSet<>();
 
     public boolean shouldExecute(Entity ent) {
-        if (!ApatheticConfig.RULES.difficultyLock.get()) return false;
+        if (!ApatheticConfig.RULES.difficultyLock.get())
+            return false;
         return true;
     }
 
@@ -44,14 +43,15 @@ public class DifficultyLockRule extends Rule {
             isCorrectDifficulty = yes;
             return yes;
         } else {
-             return isCorrectDifficulty;
+            return isCorrectDifficulty;
         }
     }
 
     public static void difficultyChange(Difficulty difficulty) {
         if (allowedDifficulties.contains(idToDifficulty(difficulty.getId()))) {
             isCorrectDifficulty = true;
-        } else isCorrectDifficulty = false;
+        } else
+            isCorrectDifficulty = false;
     }
 
     public static String idToDifficulty(int id) {
